@@ -1,0 +1,46 @@
+service: manage-email-notification
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: dev
+  region: us-east-1
+  environment:
+    UPDATE_NOTIFICATION_STATUS_QUEUE_ACCOUNT_ID:
+    UPDATE_NOTIFICATION_STATUS_QUEUE_NAME: 'updateNotificationStatusQueue'
+    UPDATE_NOTIFICATION_STATUS_QUEUE_REGION: 'us-east-1'
+    SEND_EMAIL_QUEUE_ACCOUNT_ID:
+    SEND_EMAIL_QUEUE_NAME: 'emailQueue'
+    SEND_EMAIL_QUEUE_REGION: 'us-east-1'
+    EMAIL_FROM: 'aws-lambda-sqs-test-email@test.com'
+    SEND_GRID_KEY: ''
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action: 'sqs:SendMessage'
+          Resource: 'arn:aws:sqs:${self:provider.environment.UPDATE_NOTIFICATION_STATUS_QUEUE_REGION}:${self:provider.environment.UPDATE_NOTIFICATION_STATUS_QUEUE_ACCOUNT_ID}:${self:provider.environment.UPDATE_NOTIFICATION_STATUS_QUEUE_NAME}'
+
+package:
+  individually: true
+  exclude:
+    - ./**
+  include:
+    - node_modules/**/*
+functions:
+  sendEmail:
+    handler: dist/handler.sendEmail
+    package:
+      include:
+        - 'dist/**/*'
+        - '!dist/**/*.map'
+    events:
+      - sqs:
+          arn: 'arn:aws:sqs:${self:provider.environment.SEND_EMAIL_QUEUE_REGION}:${self:provider.environment.SEND_EMAIL_QUEUE_ACCOUNT_ID}:${self:provider.environment.SEND_EMAIL_QUEUE_NAME}'
+    environment:
+      DB_HOST:
+      DB_PORT: 5432
+      DB_NAME: 'demo'
+      DB_USERNAME: 'postgres'
+      DB_PASSWORD:
+      DB_DRIVER: 'postgres'
